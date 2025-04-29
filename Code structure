@@ -1,0 +1,19 @@
+nyc-finance-data-engineering/
+│
+├── data_ingestion/
+│   └── fetch_data.py
+├── data_cleaning/
+│   └── clean_data.py
+├── data_modeling/
+│   └── schema.sql
+├── data_pipeline/
+│   └── pipeline.py
+├── analytics/
+│   └── analysis.ipynb
+├── dashboard/
+│   └── app.py  # Streamlit or Dash
+├── tests/
+│   └── test_pipeline.py
+├── README.md
+├── requirements.txt
+└── LICENSE
