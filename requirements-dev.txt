@@ -1,0 +1,15 @@
+# Linters and formatters
+flake8
+black
+mypy
+
+# Testing
+pytest
+pytest-cov
+
+# Type-checking
+types-requests
+
+# (Optional) Documentation generation
+mkdocs
+mkdocstrings
