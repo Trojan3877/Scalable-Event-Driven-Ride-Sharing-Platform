@@ -1,3 +1,7 @@
+![CI](https://img.shields.io/github/workflow/status/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform/CI?label=CI)
+![License](https://img.shields.io/github/license/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform)
+![Stars](https://img.shields.io/github/stars/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform?style=social)
+
 ## System Architecture
 
 ![System Architecture](docs/architecture.png)
