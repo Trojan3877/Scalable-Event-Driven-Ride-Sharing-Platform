@@ -1,3 +1,7 @@
+## System Architecture
+
+![System Architecture](docs/architecture.png)
+
 # Scalable-Event-Driven-Ride-Sharing-Platform
 System Design architecture for ride-sharing platform
 # Scalable Event Ride Sharing Platform 🚗📍
