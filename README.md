@@ -1,57 +1,68 @@
-![CI](https://img.shields.io/github/workflow/status/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform/CI?label=CI)
-![License](https://img.shields.io/github/license/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform)
-![Stars](https://img.shields.io/github/stars/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform?style=social)
+# Scalable Event-Driven Ride-Sharing Platform
 
-## System Architecture
+![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
+![GitHub repo stars](https://img.shields.io/github/stars/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform?style=social)
+![Build passing](https://img.shields.io/github/actions/workflow/status/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform/ci.yml?branch=main)
+![Python version](https://img.shields.io/badge/python-3.9%2B-blue)
 
-![System Architecture](docs/architecture.png)
-
-# Scalable-Event-Driven-Ride-Sharing-Platform
-System Design architecture for ride-sharing platform
-# Scalable Event Ride Sharing Platform 🚗📍
+---
 
 ## Overview
-This project is a scalable event-based ride-sharing platform built to handle high traffic scenarios like concerts, sports games, and conferences. It allows users to request rides, find matches based on proximity and event timing, and supports real-time updates, geolocation, and dynamic pricing. The system is designed using microservices, cloud-native principles, and high-availability architecture to ensure performance under heavy load.
 
-## Features
-- 🎫 Event-based ride coordination
-- 📍 Real-time location matching
-- 💬 Chat system between drivers and riders
-- ⚙️ Dynamic pricing model
-- 🧠 Optional AI/ML module for route optimization and ETA prediction
-- ☁️ Scalable architecture using Docker, Kubernetes, and cloud services
-- 🔐 Authentication and authorization using OAuth2.0 or JWT
-- 📊 Analytics dashboard for admins (rides, congestion heatmaps, etc.)
+This project implements a **Scalable, Event-Driven Architecture** for a next-gen ride-sharing platform.
+
+Core components:
+✅ Microservices architecture  
+✅ Event-driven messaging (Kafka)  
+✅ Real-time driver & rider matching  
+✅ Scalable system design
+
+---
+
+## Business Impact
+
+Modern ride-sharing platforms demand:
+- **Real-time event processing**  
+- **High availability & fault tolerance**  
+- **Scalable architecture for peak loads**  
+
+This project demonstrates the architecture of an **industry-grade mobility platform**.
+
+---
+
+## Architecture
+
+![Architecture Diagram](docs/architecture.png)
+
+---
+
+## Key Features
+
+- Asynchronous driver-rider matching  
+- Geo-distributed architecture  
+- Event sourcing with Kafka  
+- RESTful API endpoints  
+
+---
 
 ## Tech Stack
 
-| Category        | Tools & Frameworks                               |
-|----------------|---------------------------------------------------|
-| Backend         | Python (FastAPI), Node.js (Express)              |
-| Frontend        | React.js, Tailwind CSS                           |
-| Database        | PostgreSQL (rider/driver/event data), Redis (cache) |
-| ML Integration  | Scikit-learn or TensorFlow (optional module)     |
-| Geolocation     | Google Maps API or OpenStreetMap                 |
-| Deployment      | Docker, Kubernetes (GKE/EKS), CI/CD via GitHub Actions |
-| Cloud Services  | AWS / GCP / Azure (S3, EC2, Load Balancers)      |
-| Messaging       | Apache Kafka or RabbitMQ                         |
-| Auth            | Firebase Auth / Auth0 / Custom JWT               |
-| Logging & Monitoring | Prometheus, Grafana, ELK Stack              |
+- Python  
+- Kafka  
+- FastAPI  
+- Docker  
 
-## Architecture Diagram
-> If you'd like, I can generate a clean architecture diagram for this project.
+---
 
-## Getting Started
+## Future Work
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js & Python 3.10+
-- Postgres DB running locally or via Docker
-- Google Maps API key (or another provider)
+- Integration with payment services  
+- Predictive demand modeling  
+- Cloud-native deployment (AWS/GCP)
 
-### Installation
+---
 
-1. **Clone the repo**  
-   ```bash
-   git clone https://github.com/your-username/event-ride-sharing.git
-   cd event-ride-sharing
+## License
+
+MIT License
