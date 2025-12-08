@@ -3,104 +3,74 @@ from fastapi import FastAPI
 
 from src.common.event_bus import EventBus
 from src.common.utils import get_logger
-from src.common.models import MatchResultEvent, DriverLocationEvent
+from src.common.models import DriverLocationEvent
 
-from src.dispatch-service.producer import DispatchProducer
-from src.dispatch-service.consumer import DispatchConsumer
-from src.dispatch-service.api_router import router, DRIVER_STORE, MATCH_RESULTS_STORE
-
-# --------------------------------------------------------------------
-# CORE STATE STORES
-# --------------------------------------------------------------------
-
-# In-memory driver store populated by Driver Location Service
-_driver_locations: list[DriverLocationEvent] = []
-
-def driver_store():
-    return list(_driver_locations)
-
-# In-memory match results
-_match_results: list[MatchResultEvent] = []
-
-def match_results_store():
-    return _match_results
+from src.driver-location-service.location_store import DriverLocationStore
+from src.driver-location-service.consumer import DriverLocationConsumer
+from src.driver-location-service.api_router import router, DRIVER_STORE
 
 
-# Surge lookup (injected later; stub for now)
-def surge_lookup(zone_id: str) -> float:
-    # In production → query pricing service cache
-    return 1.0
+# ------------------------------------------------------------
+# INITIALIZATION
+# ------------------------------------------------------------
 
+logger = get_logger("DriverLocationMain")
 
-# --------------------------------------------------------------------
-# SERVICE INITIALIZATION
-# --------------------------------------------------------------------
-
-logger = get_logger("DispatchMain")
 event_bus = EventBus()
+driver_store = DriverLocationStore()
 
 app = FastAPI(
-    title="Dispatch Service",
-    description="Driver-rider matching microservice.",
+    title="Driver Location Service",
+    description="Real-time driver location ingestion service for the ride-sharing platform.",
     version="1.0.0",
 )
 
 
-# --------------------------------------------------------------------
+# ------------------------------------------------------------
 # STARTUP SEQUENCE
-# --------------------------------------------------------------------
+# ------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup_event():
 
-    logger.info("Starting Dispatch Service...")
+    logger.info("Starting Driver Location Service...")
 
-    # Inject stores into API router
-    global DRIVER_STORE, MATCH_RESULTS_STORE
+    # Inject store into API router
+    global DRIVER_STORE
     DRIVER_STORE = driver_store
-    MATCH_RESULTS_STORE = _match_results
 
-    # Initialize producer and consumer
-    producer = DispatchProducer(event_bus)
-    consumer = DispatchConsumer(
+    # Initialize consumer
+    consumer = DriverLocationConsumer(
         event_bus=event_bus,
-        driver_store=driver_store,
-        surge_lookup=surge_lookup,
+        store=driver_store
     )
 
-    # Subscribe to trip requests
-    await event_bus.subscribe("trip_requests", consumer.handle_trip_request)
+    # Subscribe to driver location update events
+    await event_bus.subscribe(
+        "driver_location_updates",
+        consumer.handle_driver_location
+    )
 
-    # Subscribe to match results
-    async def match_result_listener(data):
-        event = MatchResultEvent(**data)
-        _match_results.append(event)
-        logger.info(f"[DISPATCH] Stored match result for rider {event.rider_id}")
-
-    await event_bus.subscribe("match_results", match_result_listener)
-
-    # Start background async tasks
-    asyncio.create_task(producer.start())
-
-    logger.info("Dispatch Service started successfully.")
+    logger.info("Driver Location Service started successfully.")
 
 
-# --------------------------------------------------------------------
+# ------------------------------------------------------------
 # ROUTER
-# --------------------------------------------------------------------
+# ------------------------------------------------------------
 
-app.include_router(router, prefix="/dispatch")
+app.include_router(router, prefix="/driver-location")
 
 
-# --------------------------------------------------------------------
-# LOCAL RUN
-# --------------------------------------------------------------------
+# ------------------------------------------------------------
+# LOCAL RUNNER
+# ------------------------------------------------------------
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        "src.dispatch-service.main:app",
+        "src.driver-location-service.main:app",
         host="0.0.0.0",
-        port=8002,
+        port=8003,
         reload=True
     )
