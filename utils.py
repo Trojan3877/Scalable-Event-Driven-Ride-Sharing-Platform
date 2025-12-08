@@ -1,25 +1,24 @@
-import json
+import uuid
 import logging
-import math
 from datetime import datetime
-from uuid import uuid4
 
 
 # ----------------------------
-# Logging Configuration
+# Logging Setup
 # ----------------------------
 
-def get_logger(service_name: str):
+def get_logger(name: str):
     """
-    Creates a consistent logger for all microservices.
+    Creates a formatted logger for any microservice.
     """
-    logger = logging.getLogger(service_name)
+    logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
     if not logger.handlers:
         handler = logging.StreamHandler()
         formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+            "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -28,51 +27,35 @@ def get_logger(service_name: str):
 
 
 # ----------------------------
-# Distance Calculation (Haversine)
+# UUID Helper
 # ----------------------------
 
-def haversine_distance(lat1, lon1, lat2, lon2):
+def generate_id(prefix: str = "") -> str:
     """
-    Calculates the distance between two GPS coordinates in kilometers.
+    Generates unique IDs for trips, events, etc.
     """
-    R = 6371  # Earth radius in km
-
-    d_lat = math.radians(lat2 - lat1)
-    d_lon = math.radians(lon2 - lon1)
-
-    a = (
-        math.sin(d_lat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(d_lon / 2) ** 2
-    )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+    value = f"{prefix}{uuid.uuid4().hex[:12]}"
+    return value
 
 
 # ----------------------------
-# Time Utilities
+# Timestamp Helper
 # ----------------------------
 
-def utc_now():
+def now_timestamp() -> datetime:
+    """Returns a timezone-aware timestamp."""
     return datetime.utcnow()
 
 
 # ----------------------------
-# JSON Serialization Helpers
+# Zone Utility Helper
 # ----------------------------
 
-def to_json(data):
-    return json.dumps(data, default=str)
-
-
-def from_json(json_str):
-    return json.loads(json_str)
-
-
-# ----------------------------
-# ID Generators
-# ----------------------------
-
-def generate_id():
-    return str(uuid4())
+def zone_from_coordinates(lat: float, lon: float) -> str:
+    """
+    Converts coordinates into artificial zones.
+    In a real system, this uses geohashing.
+    """
+    lat_bucket = int(lat * 10) % 5
+    lon_bucket = int(lon * 10) % 5
+    return f"Z{lat_bucket}{lon_bucket}"
