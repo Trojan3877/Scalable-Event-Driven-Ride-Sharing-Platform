@@ -1,41 +1,55 @@
 from fastapi import APIRouter, HTTPException
-from src.pricing-service.pricing_engine import PricingEngine
+from typing import List, Dict
+
+from src.common.models import DriverLocationEvent, MatchResultEvent
 from src.common.utils import get_logger
 
 router = APIRouter()
-logger = get_logger("PricingAPI")
+logger = get_logger("DispatchAPI")
 
-# In-memory surge cache for fast lookup
-SURGE_CACHE = {}  # { "A1": 1.8, "B2": 1.2, ... }
 
-def update_surge(zone_id: str, multiplier: float):
+# These will be injected by main.py
+DRIVER_STORE = None          # Callable → List[DriverLocationEvent]
+MATCH_RESULTS_STORE = None   # List[MatchResultEvent]
+
+
+@router.get("/drivers")
+async def get_available_drivers():
     """
-    Called by the consumer after computing new zone surge.
+    Returns the list of currently available drivers.
     """
-    SURGE_CACHE[zone_id] = multiplier
-    logger.info(f"[API] Updated surge multiplier for zone {zone_id} = {multiplier}")
+    if DRIVER_STORE is None:
+        raise HTTPException(status_code=500, detail="Driver store not initialized.")
+
+    drivers = DRIVER_STORE()
+    return {"count": len(drivers), "drivers": drivers}
 
 
-@router.get("/surge/{zone_id}")
-async def get_surge(zone_id: str):
+@router.get("/matches")
+async def get_match_results():
     """
-    Fetch latest surge multiplier for a given zone.
+    Returns a list of recent match results.
     """
-    if zone_id not in SURGE_CACHE:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No surge information available for zone {zone_id}"
-        )
+    if MATCH_RESULTS_STORE is None:
+        raise HTTPException(status_code=500, detail="Match results store not initialized.")
 
-    return {
-        "zone_id": zone_id,
-        "surge_multiplier": SURGE_CACHE[zone_id]
-    }
+    return {"count": len(MATCH_RESULTS_STORE), "matches": MATCH_RESULTS_STORE}
 
 
-@router.get("/surge/all")
-async def get_all_surge():
+@router.get("/matches/{index}")
+async def get_match_by_index(index: int):
     """
-    Get all current surge multipliers for every zone.
+    Fetch a specific match result by list index.
     """
-    return SURGE_CACHE
+    if MATCH_RESULTS_STORE is None or index < 0 or index >= len(MATCH_RESULTS_STORE):
+        raise HTTPException(status_code=404, detail="Match not found.")
+
+    return MATCH_RESULTS_STORE[index]
+
+
+@router.get("/health")
+async def health_check():
+    """
+    Service status check.
+    """
+    return {"status": "OK", "service": "dispatch-service"}
