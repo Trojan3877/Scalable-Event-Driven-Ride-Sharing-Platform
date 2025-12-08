@@ -1,66 +1,132 @@
 from typing import List, Optional
-from src.common.models import RideRequest, DriverLocation, MatchResult
-from src.common.utils import haversine_distance, utc_now, generate_id
+from math import sqrt
+
+from src.common.models import DriverLocationEvent, TripRequestEvent, MatchResultEvent
+from src.common.utils import get_logger, now_timestamp
 
 
 class MatchingEngine:
     """
-    Core matching logic for assigning drivers to ride requests.
-    Production-ready, easily extendable for ML models or geospatial indexing.
+    Core driver–rider matching algorithm.
+
+    This version uses:
+    - Euclidean distance heuristic
+    - Simple ETA estimation
+    - Surge-aware scoring
+    - Top-K candidate ranking
+
+    In real systems (Uber, Lyft), this would expand into:
+    - H3 geospatial indexing
+    - ML-based ETA prediction
+    - Supply/demand balancing
     """
 
-    def __init__(self):
-        # In production this would be from Redis, Cassandra, DynamoDB, etc.
-        self.active_drivers: List[DriverLocation] = []
+    def __init__(self, max_candidates: int = 25):
+        self.max_candidates = max_candidates
+        self.logger = get_logger("MatchingEngine")
 
-    def update_driver_location(self, driver: DriverLocation):
-        """
-        Add or update driver info in memory. This would normally come from Kafka.
-        """
-        # Remove existing driver entry
-        self.active_drivers = [d for d in self.active_drivers if d.driver_id != driver.driver_id]
-        self.active_drivers.append(driver)
+    # ------------------------------------------------------------
+    # Distance Heuristic
+    # ------------------------------------------------------------
 
-    def find_best_driver(self, request: RideRequest) -> Optional[MatchResult]:
+    def _distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """
-        Select the closest available driver using Haversine distance.
+        Simple Euclidean distance for demo purposes.
+        Replace with Haversine or H3 index for production.
         """
-        available_drivers = [d for d in self.active_drivers if d.is_available]
+        return sqrt((lat1 - lat2) ** 2 + (lon1 - lon2) ** 2)
 
-        if not available_drivers:
-            return None
+    # ------------------------------------------------------------
+    # ETA Estimation
+    # ------------------------------------------------------------
 
-        # Compute distances
-        scored_drivers = []
-        for driver in available_drivers:
-            distance = haversine_distance(
-                request.pickup_lat,
-                request.pickup_lng,
-                driver.lat,
-                driver.lng,
+    def _estimate_eta(self, distance: float) -> float:
+        """
+        ETA calculation: distance * factor
+        In real systems: ML model or traffic-aware routing system.
+        """
+        return round(distance * 4, 2)  # 4 minutes per distance unit heuristic
+
+    # ------------------------------------------------------------
+    # Score Function
+    # ------------------------------------------------------------
+
+    def _score_driver(self, distance: float, surge_multiplier: float) -> float:
+        """
+        Higher score = better match.
+        Lower distance = higher score.
+        Surge slightly boosts score to balance rider demand.
+        """
+        return max(0.01, (1 / (distance + 0.01))) * surge_multiplier
+
+    # ------------------------------------------------------------
+    # Candidate Ranking
+    # ------------------------------------------------------------
+
+    def rank_drivers(
+        self,
+        drivers: List[DriverLocationEvent],
+        trip: TripRequestEvent,
+        surge_multiplier: float
+    ) -> List[DriverLocationEvent]:
+        """
+        Sort drivers by score (descending).
+        """
+        scored = []
+
+        for d in drivers:
+            dist = self._distance(
+                d.lat, d.lon,
+                trip.pickup_lat, trip.pickup_lon
             )
 
-            # ETA estimation: assume average 30 km/h → 0.5 km/min
-            eta_minutes = distance / 0.5 if distance > 0 else 1
-            scored_drivers.append((driver, distance, eta_minutes))
+            score = self._score_driver(dist, surge_multiplier)
+            scored.append((score, d))
 
-        # Pick closest driver
-        scored_drivers.sort(key=lambda x: x[1])  # sort by distance
+        ranked = sorted(scored, key=lambda x: x[0], reverse=True)
+        top_ranked = [d for _, d in ranked[: self.max_candidates]]
 
-        best_driver, best_distance, best_eta = scored_drivers[0]
+        self.logger.info(f"Ranked {len(top_ranked)} drivers for trip {trip.rider_id}")
+        return top_ranked
 
-        # Create match result
-        match = MatchResult(
-            match_id=generate_id(),
-            request_id=request.request_id,
-            driver_id=best_driver.driver_id,
-            eta_minutes=round(best_eta, 2),
-            distance_km=round(best_distance, 2),
-            surge_multiplier=request.surge_multiplier,
-            timestamp=utc_now(),
+    # ------------------------------------------------------------
+    # Match Selection
+    # ------------------------------------------------------------
+
+    def select_best_match(
+        self,
+        drivers: List[DriverLocationEvent],
+        trip: TripRequestEvent,
+        surge_multiplier: float
+    ) -> Optional[MatchResultEvent]:
+        """
+        Selects the highest-ranked driver and returns a MatchResultEvent.
+        """
+        if not drivers:
+            self.logger.warning("No available drivers for matching.")
+            return None
+
+        ranked = self.rank_drivers(drivers, trip, surge_multiplier)
+        best = ranked[0]
+
+        distance = self._distance(
+            best.lat, best.lon,
+            trip.pickup_lat, trip.pickup_lon
+        )
+        eta = self._estimate_eta(distance)
+
+        match_event = MatchResultEvent(
+            trip_id=f"trip_{trip.rider_id}_{now_timestamp().timestamp()}",
+            driver_id=best.driver_id,
+            rider_id=trip.rider_id,
+            eta_minutes=eta,
+            surge_multiplier=surge_multiplier,
+            timestamp=now_timestamp(),
         )
 
-        # Mark driver as unavailable
-        best_driver.is_available = False
+        self.logger.info(
+            f"Selected driver {best.driver_id} for rider {trip.rider_id} "
+            f"(ETA: {eta} mins, Surge: {surge_multiplier})"
+        )
 
-        return match
+        return match_event
