@@ -1,48 +1,95 @@
-from src.pricing-service.pricing_engine import PricingEngine
-from src.common.models import PricingEvent
+from typing import Dict, List
+
+from src.common.models import TripRequestEvent, DriverLocationEvent
 from src.common.utils import get_logger
+from src.dispatch-service.matching_engine import MatchingEngine
 
 
-class PricingConsumer:
+class DispatchConsumer:
     """
-    Consumes supply/demand events for each zone,
-    computes surge multipliers, and publishes PricingEvents.
+    Consumes TripRequestEvent messages, performs driver–rider matching,
+    and publishes MatchResultEvent back to the event bus.
+
+    This service interacts with:
+    - Driver Location Service (driver store)
+    - Pricing Service (surge multiplier)
     """
 
-    def __init__(self, event_bus):
-        self.event_bus = event_bus
-        self.engine = PricingEngine()
-        self.logger = get_logger("PricingConsumer")
-
-    async def handle_supply_demand(self, data: dict):
+    def __init__(self, event_bus, driver_store, surge_lookup):
         """
-        Example incoming event:
+        driver_store: callable -> returns List[DriverLocationEvent]
+        surge_lookup: callable -> returns float
+        """
+        self.event_bus = event_bus
+        self.driver_store = driver_store
+        self.surge_lookup = surge_lookup
+        self.engine = MatchingEngine()
+        self.logger = get_logger("DispatchConsumer")
+
+    # ------------------------------------------------------------
+    # Core Handler
+    # ------------------------------------------------------------
+
+    async def handle_trip_request(self, data: Dict):
+        """
+        Expected TripRequestEvent:
         {
-            "zone_id": "A1",
-            "demand": 15,
-            "supply": 4
+            "rider_id": "r123",
+            "pickup_lat": 40.712,
+            "pickup_lon": -74.005,
+            "dropoff_lat": 40.730,
+            "dropoff_lon": -73.935
         }
         """
-        zone_id = data["zone_id"]
-        demand = data["demand"]
-        supply = data["supply"]
 
-        pricing_event: PricingEvent = self.engine.compute_surge(
-            demand=demand,
-            supply=supply,
-            zone_id=zone_id
+        trip = TripRequestEvent(**data)
+
+        self.logger.info(f"Received trip request from rider {trip.rider_id}")
+
+        # ----------------------------
+        # Load available drivers
+        # ----------------------------
+        available_drivers: List[DriverLocationEvent] = self.driver_store()
+
+        if not available_drivers:
+            self.logger.warning("No drivers available for matching.")
+            return
+
+        # ----------------------------
+        # Get surge multiplier
+        # ----------------------------
+        zone_id = "default"  # later replaced with geospatial zone mapping
+        surge_multiplier = self.surge_lookup(zone_id)
+
+        # ----------------------------
+        # Driver Matching
+        # ----------------------------
+        match_event = self.engine.select_best_match(
+            drivers=available_drivers,
+            trip=trip,
+            surge_multiplier=surge_multiplier
         )
 
-        # Publish surge multiplier downstream
-        await self.event_bus.publish("surge_updates", pricing_event.dict())
+        if match_event is None:
+            self.logger.warning("Failed to produce match event.")
+            return
+
+        # ----------------------------
+        # Publish match result
+        # ----------------------------
+        await self.event_bus.publish("match_results", match_event.dict())
 
         self.logger.info(
-            f"Published surge update for zone {zone_id}: {pricing_event.surge_multiplier}"
+            f"Published match result for rider {trip.rider_id} → driver {match_event.driver_id}"
         )
+
+    # ------------------------------------------------------------
+    # Subscription
+    # ------------------------------------------------------------
 
     async def start(self):
         """
-        Subscribe to supply/demand updates.
+        Subscribe to incoming trip requests.
         """
-        self.logger.info("PricingConsumer started. Listening for supply/demand events...")
-        await self.event_bus.subscribe("zone_supply_demand", self.handle_supply_demand)
+        self.logger.info("DispatchConsumer subscribed to trip_request events...")
+        await self.event_bus.subscribe("trip_requests", self.handle_trip_request)
