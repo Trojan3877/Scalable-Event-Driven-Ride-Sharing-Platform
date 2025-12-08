@@ -1,58 +1,48 @@
-import asyncio
-from src.common.models import RideRequest, DriverLocation
+from src.pricing-service.pricing_engine import PricingEngine
+from src.common.models import PricingEvent
 from src.common.utils import get_logger
-from src.matching-service.matching_engine import MatchingEngine
 
 
-class MatchingConsumer:
+class PricingConsumer:
     """
-    Consumes ride-request and driver-location events from the EventBus,
-    feeds them into MatchingEngine, and triggers match generation.
+    Consumes supply/demand events for each zone,
+    computes surge multipliers, and publishes PricingEvents.
     """
 
     def __init__(self, event_bus):
         self.event_bus = event_bus
-        self.engine = MatchingEngine()
-        self.logger = get_logger("MatchingConsumer")
+        self.engine = PricingEngine()
+        self.logger = get_logger("PricingConsumer")
 
-    async def handle_ride_request(self, data: dict):
-        request = RideRequest(**data)
-        self.logger.info(f"Received ride request {request.request_id}")
+    async def handle_supply_demand(self, data: dict):
+        """
+        Example incoming event:
+        {
+            "zone_id": "A1",
+            "demand": 15,
+            "supply": 4
+        }
+        """
+        zone_id = data["zone_id"]
+        demand = data["demand"]
+        supply = data["supply"]
 
-        match_result = self.engine.find_best_driver(request)
+        pricing_event: PricingEvent = self.engine.compute_surge(
+            demand=demand,
+            supply=supply,
+            zone_id=zone_id
+        )
 
-        if match_result:
-            self.logger.info(
-                f"Matched request {request.request_id} "
-                f"with driver {match_result.driver_id}"
-            )
-            # Publish match result to event bus
-            await self.event_bus.publish("match_results", match_result.dict())
-        else:
-            self.logger.warning(
-                f"No drivers available for request {request.request_id}"
-            )
+        # Publish surge multiplier downstream
+        await self.event_bus.publish("surge_updates", pricing_event.dict())
 
-    async def handle_driver_update(self, data: dict):
-        driver = DriverLocation(**data)
-        self.logger.info(f"Updated driver {driver.driver_id} location")
-        self.engine.update_driver_location(driver)
+        self.logger.info(
+            f"Published surge update for zone {zone_id}: {pricing_event.surge_multiplier}"
+        )
 
     async def start(self):
         """
-        Subscribes to ride request + driver updates.
-        Two streams:
-        - ride_requests
-        - driver_updates
+        Subscribe to supply/demand updates.
         """
-
-        self.logger.info("MatchingConsumer started. Subscribing to topics...")
-
-        await asyncio.gather(
-            self.event_bus.subscribe(
-                "ride_requests", self.handle_ride_request
-            ),
-            self.event_bus.subscribe(
-                "driver_updates", self.handle_driver_update
-            ),
-        )
+        self.logger.info("PricingConsumer started. Listening for supply/demand events...")
+        await self.event_bus.subscribe("zone_supply_demand", self.handle_supply_demand)
