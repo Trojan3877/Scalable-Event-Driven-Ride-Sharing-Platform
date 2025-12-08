@@ -1,95 +1,62 @@
-from typing import Dict, List
-
-from src.common.models import TripRequestEvent, DriverLocationEvent
+from typing import Dict
+from src.common.models import DriverLocationEvent
 from src.common.utils import get_logger
-from src.dispatch-service.matching_engine import MatchingEngine
+
+logger = get_logger("DriverLocationConsumer")
 
 
-class DispatchConsumer:
+class DriverLocationConsumer:
     """
-    Consumes TripRequestEvent messages, performs driver–rider matching,
-    and publishes MatchResultEvent back to the event bus.
+    Listens for incoming driver telemetry updates and stores them in
+    DriverLocationStore.
 
-    This service interacts with:
-    - Driver Location Service (driver store)
-    - Pricing Service (surge multiplier)
+    Expected event format:
+    {
+        "driver_id": "d123",
+        "lat": 40.712,
+        "lon": -74.005,
+        "timestamp": "...",
+        "status": "available"
+    }
     """
 
-    def __init__(self, event_bus, driver_store, surge_lookup):
-        """
-        driver_store: callable -> returns List[DriverLocationEvent]
-        surge_lookup: callable -> returns float
-        """
+    def __init__(self, event_bus, store):
         self.event_bus = event_bus
-        self.driver_store = driver_store
-        self.surge_lookup = surge_lookup
-        self.engine = MatchingEngine()
-        self.logger = get_logger("DispatchConsumer")
+        self.store = store
+        self.logger = logger
 
     # ------------------------------------------------------------
-    # Core Handler
+    # Handle Incoming Driver Location Updates
     # ------------------------------------------------------------
 
-    async def handle_trip_request(self, data: Dict):
+    async def handle_driver_location(self, data: Dict):
         """
-        Expected TripRequestEvent:
-        {
-            "rider_id": "r123",
-            "pickup_lat": 40.712,
-            "pickup_lon": -74.005,
-            "dropoff_lat": 40.730,
-            "dropoff_lon": -73.935
-        }
+        Convert dictionary → Pydantic model → update store.
         """
 
-        trip = TripRequestEvent(**data)
-
-        self.logger.info(f"Received trip request from rider {trip.rider_id}")
-
-        # ----------------------------
-        # Load available drivers
-        # ----------------------------
-        available_drivers: List[DriverLocationEvent] = self.driver_store()
-
-        if not available_drivers:
-            self.logger.warning("No drivers available for matching.")
+        try:
+            event = DriverLocationEvent(**data)
+        except Exception as e:
+            self.logger.error(f"Invalid driver location event: {e}")
             return
 
-        # ----------------------------
-        # Get surge multiplier
-        # ----------------------------
-        zone_id = "default"  # later replaced with geospatial zone mapping
-        surge_multiplier = self.surge_lookup(zone_id)
-
-        # ----------------------------
-        # Driver Matching
-        # ----------------------------
-        match_event = self.engine.select_best_match(
-            drivers=available_drivers,
-            trip=trip,
-            surge_multiplier=surge_multiplier
-        )
-
-        if match_event is None:
-            self.logger.warning("Failed to produce match event.")
-            return
-
-        # ----------------------------
-        # Publish match result
-        # ----------------------------
-        await self.event_bus.publish("match_results", match_event.dict())
+        # Update the driver store
+        self.store.upsert_driver(event)
 
         self.logger.info(
-            f"Published match result for rider {trip.rider_id} → driver {match_event.driver_id}"
+            f"Driver update processed: {event.driver_id} @ ({event.lat}, {event.lon})"
         )
 
     # ------------------------------------------------------------
-    # Subscription
+    # Subscribe to EventBus Topic
     # ------------------------------------------------------------
 
     async def start(self):
         """
-        Subscribe to incoming trip requests.
+        Begins listening to driver_location_updates topic.
         """
-        self.logger.info("DispatchConsumer subscribed to trip_request events...")
-        await self.event_bus.subscribe("trip_requests", self.handle_trip_request)
+        self.logger.info("DriverLocationConsumer listening for driver updates...")
+        await self.event_bus.subscribe(
+            "driver_location_updates",
+            self.handle_driver_location
+        )
