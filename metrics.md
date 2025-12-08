@@ -1,108 +1,91 @@
-# 📊 System Metrics & Performance Characteristics  
-### Scalable Event-Driven Ride-Sharing Platform  
-### Author: Corey Leath
+# 📊 Engineering & System Performance Metrics  
+### Scalable Event-Driven Ride-Sharing Platform
 
-This document summarizes the engineering metrics, performance characteristics,
-scalability targets, and reliability expectations of the distributed
-ride-sharing platform. These metrics mirror real-world targets used by
-companies such as Uber, Lyft, and DoorDash.
+This document defines the quantifiable engineering KPIs used to evaluate system health, scalability, and ML/dispatch performance.
 
 ---
 
-# 🚦 1. Surge Pricing Engine Metrics
+## 🚀 1. System Throughput Metrics
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Surge computation latency | **< 10 ms** | Pydantic validation + pure Python math operations. |
-| Event→surge propagation | **< 50 ms** | From incoming supply/demand event to API-visible multiplier. |
-| Cache update frequency | **1–2 updates/sec per zone** | Realistic for city-scale rider load. |
-| Supported zones | **50–200 active zones** | Expandable with sharding. |
-
----
-
-# 📡 2. Event Bus Throughput
-
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Events processed per second | **300–1,000 msg/sec** | AsyncIO concurrency + in-memory routing. |
-| Producer publish latency | **< 5 ms** | No network overhead for dev environment. |
-| Subscriber fan-out time | **< 20 ms** | Concurrent tasks via asyncio.gather. |
+| Metric | Description | Target |
+|-------|-------------|--------|
+| Driver Location Events / sec | Number of GPS updates processed by the event bus | 5,000+ |
+| Ride Requests / sec | Number of concurrent rider requests | 1,000+ |
+| Dispatch Allocation Latency | Time from ride request → driver assignment | < 50 ms |
+| Event Bus Latency | Kafka-style event propagation | < 10 ms |
 
 ---
 
-# 🧠 3. Dispatch & Matching Engine Metrics
+## 🧠 2. Machine Learning / Matching Metrics
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Driver match latency | **< 100 ms** | Includes distance estimate + surge pricing lookup. |
-| ETA estimation time | **< 30 ms** | Lightweight heuristic without ML. |
-| Match throughput | **50–200 matches/sec** | Scales horizontally with worker count. |
-| Driver selection depth | **10–50 candidates** | Configurable ranking window. |
-
----
-
-# 📍 4. Driver Location Service Metrics
-
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Location update rate | **1 update/sec per driver** | Matches real-world telematics freq. |
-| Max active drivers | **1,000–5,000** | In-memory storage for dev. |
-| Query latency (driver lookup) | **< 10 ms** | Dict-based lookup + zone calculation. |
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Matching Accuracy | Driver chosen is truly the nearest available | 95%+ |
+| ETA Prediction Error | Avg difference between predicted vs actual | < 10% |
+| Surge Detection Speed | Time to detect abnormal demand spikes | < 2 seconds |
 
 ---
 
-# 🧾 5. Trip Management Metrics
+## 🗺 3. Geospatial Data Metrics
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Trip creation time | **< 25 ms** | Includes ID generation + initial store. |
-| Trip completion processing | **< 40 ms** | Emits PaymentEvent. |
-| Trip lookup time | **< 5 ms** | In-memory store for dev. |
-
----
-
-# ⚖️ 6. System Scalability Goals
-
-| Dimension | Target |
-|-----------|--------|
-| Horizontal scaling | **Unlimited** with stateless microservices |
-| Load shedding | Supported via event queue backpressure |
-| Service instances | **1–50 replicas** depending on load |
-| Event throughput scaling | Optimized by partitioning topics |
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Driver Location Freshness | Age of last GPS ping | < 2 seconds |
+| H3 Cell Mapping Latency | Time to compute hex cell → service region | < 1 ms |
+| Nearby Driver Lookup | Query driver store for availability | < 5 ms |
 
 ---
 
-# 🔒 7. Reliability & Fault Tolerance
+## 🧩 4. Microservice Reliability Metrics
 
-| Guarantee | Value |
-|-----------|--------|
-| API uptime target | **99.9%** |
-| Event loss tolerance | **Zero for core topics** (in production with Kafka) |
-| Graceful failover | Yes — independent microservices |
-| Circuit-breaker style isolation | Achieved through EventBus decoupling |
-
----
-
-# 🧪 8. Testing & CI Metrics
-
-| Category | Status |
-|----------|--------|
-| Static typing | Pydantic model enforcement |
-| Unit tests | Architecture supports pytest |
-| Integration tests | Enabled through EventBus simulation |
-| Load testing | Achieved via PricingProducer event loops |
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Service Uptime | Availability of all services | 99.9% |
+| Error Rate | Failed requests | < 0.01% |
+| Circuit Breaker Trips | Fault tolerance activations | < 5 per day |
+| Backpressure Handling | Queue build-up under traffic spikes | Auto-scale within 3 seconds |
 
 ---
 
-# 🚀 9. Future Metric Enhancements
+## 🧱 5. Infrastructure & DevOps Metrics
 
-- Replace EventBus with **Kafka or Redis Streams** for durability  
-- Add **Prometheus + Grafana dashboards**  
-- Add **percentile-based latency tracking (P95, P99)**  
-- Add **driver heatmaps using H3 geospatial indexing**  
-- Add **ML-based ETA prediction**  
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Container Launch Time | Docker/K8s spin-up | < 2 seconds |
+| Auto-scaling Reaction | Ability to scale microservices | < 8 seconds |
+| CI/CD Pipeline Time | Build → test → deploy | < 90 seconds |
+| API Cold Start | First request after idle | < 40 ms |
 
 ---
 
-This metrics document is designed to match Big Tech expectations for
-system-design clarity, performance transparency, and operational readiness.
+## 🔐 6. Security Metrics
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Failed Auth Attempts | Unexpected login attempts | < 0.1% |
+| Token Validation Time | JWT verification | < 2 ms |
+| PII Encryption Overhead | Performance penalty | < 5% |
+
+---
+
+## 📞 7. User Experience Metrics
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Rider Request Response | Time to view ETA after request | < 80 ms |
+| Cancellation Rate | Canceled rides | < 5% |
+| Driver Acceptance Rate | Drivers accepting assigned rides | > 90% |
+
+---
+
+## 🏁 Summary
+
+This project demonstrates **Big-Tech-grade metrics**, covering:
+
+- Dispatch performance  
+- Real-time geospatial processing  
+- Event-driven microservices  
+- Scalability & fault tolerance  
+- User experience KPIs  
+
+These metrics elevate the repo to **L5/L6 system-design readiness**.
