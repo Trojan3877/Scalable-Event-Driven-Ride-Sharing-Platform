@@ -1,52 +1,55 @@
 import asyncio
 import random
-from src.common.utils import get_logger
+from src.common.utils import get_logger, now_timestamp
 
 
-class PricingProducer:
+class DispatchProducer:
     """
-    Publishes simulated supply/demand events for each zone.
-    In production this could come from a real-time telemetry pipeline.
+    Produces simulated TripRequest events and publishes them to the event bus.
+    Used for:
+    - Load testing
+    - Demo scenarios
+    - End-to-end pipeline validation
     """
 
     def __init__(self, event_bus):
         self.event_bus = event_bus
-        self.logger = get_logger("PricingProducer")
+        self.logger = get_logger("DispatchProducer")
 
-    async def generate_supply_demand(self, zones=None):
+    # ------------------------------------------------------------
+    # Generate Random Trip Requests
+    # ------------------------------------------------------------
+
+    async def generate_trip_requests(self):
         """
-        Creates random (but realistic) demand and supply levels for testing.
-
-        zones example: ["A1", "B2", "C3"]
+        Simulates realistic rider pickup/dropoff coordinates.
+        Coordinates centered loosely around NYC grid for demo.
         """
-
-        if zones is None:
-            zones = ["A1", "B2", "C3"]
 
         while True:
-            zone_id = random.choice(zones)
-
-            demand = random.randint(1, 40)   # number of riders requesting trips
-            supply = random.randint(1, 25)   # number of available drivers
-
             event = {
-                "zone_id": zone_id,
-                "demand": demand,
-                "supply": supply
+                "rider_id": f"rider_{random.randint(1000,9999)}",
+                "pickup_lat": round(40.70 + random.random() * 0.06, 6),
+                "pickup_lon": round(-74.01 + random.random() * 0.06, 6),
+                "dropoff_lat": round(40.70 + random.random() * 0.06, 6),
+                "dropoff_lon": round(-74.01 + random.random() * 0.06, 6),
+                "timestamp": now_timestamp(),
             }
 
-            await self.event_bus.publish("zone_supply_demand", event)
+            await self.event_bus.publish("trip_requests", event)
 
-            self.logger.info(
-                f"[PRODUCER] Published supply/demand event: {event}"
-            )
+            self.logger.info(f"[PRODUCER] Published TripRequestEvent: {event}")
 
-            # control frequency of events
+            # Frequency of trip events
             await asyncio.sleep(1)
 
-    async def start(self, zones=None):
+    # ------------------------------------------------------------
+    # Startup
+    # ------------------------------------------------------------
+
+    async def start(self):
         """
-        Start the producer loop.
+        Launches continuous trip request simulation.
         """
-        self.logger.info("PricingProducer started...")
-        await self.generate_supply_demand(zones)
+        self.logger.info("DispatchProducer started...")
+        await self.generate_trip_requests()
