@@ -1,42 +1,51 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+  # ---------------------------------------------------------
+  # DRIVER LOCATION SERVICE
+  # ---------------------------------------------------------
+  driver-location:
+    build:
+      context: .
+      dockerfile: src/driver-location-service/Dockerfile
+    container_name: driver-location-service
     ports:
-      - "2181:2181"
+      - "8003:8003"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/docs"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ride-net
 
-  kafka:
-    image: bitnami/kafka:latest
-    environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
+  # ---------------------------------------------------------
+  # DISPATCH SERVICE
+  # ---------------------------------------------------------
+  dispatch:
+    build:
+      context: .
+      dockerfile: src/dispatch-service/Dockerfile
+    container_name: dispatch-service
     ports:
-      - "9092:9092"
+      - "8002:8002"
+    restart: unless-stopped
     depends_on:
-      - zookeeper
+      driver-location:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/docs"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ride-net
 
-  backend:
-    build: .
-    container_name: ride_sharing_backend
-    command: bash run_pipeline.sh
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - DB_URL=postgres://user:password@db:5432/rides
-    depends_on:
-      - kafka
-      - db
-    volumes:
-      - .:/app
 
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: rides
-    ports:
-      - "5432:5432"
+# -----------------------------------------------------------
+# DOCKER NETWORKS
+# -----------------------------------------------------------
+networks:
+  ride-net:
+    driver: bridge
