@@ -1,26 +1,52 @@
-from src.common.models import RideRequest, DriverLocation
+import asyncio
+import random
 from src.common.utils import get_logger
 
 
-class MatchingProducer:
+class PricingProducer:
     """
-    Utility class for publishing ride requests and driver updates
-    into the event-driven system.
-    Used for testing, load generation, or manual event injection.
+    Publishes simulated supply/demand events for each zone.
+    In production this could come from a real-time telemetry pipeline.
     """
 
     def __init__(self, event_bus):
         self.event_bus = event_bus
-        self.logger = get_logger("MatchingProducer")
+        self.logger = get_logger("PricingProducer")
 
-    async def publish_ride_request(self, request: RideRequest):
-        self.logger.info(
-            f"Publishing ride request {request.request_id} for passenger {request.passenger_id}"
-        )
-        await self.event_bus.publish("ride_requests", request.dict())
+    async def generate_supply_demand(self, zones=None):
+        """
+        Creates random (but realistic) demand and supply levels for testing.
 
-    async def publish_driver_update(self, driver: DriverLocation):
-        self.logger.info(
-            f"Publishing driver update for driver {driver.driver_id}"
-        )
-        await self.event_bus.publish("driver_updates", driver.dict())
+        zones example: ["A1", "B2", "C3"]
+        """
+
+        if zones is None:
+            zones = ["A1", "B2", "C3"]
+
+        while True:
+            zone_id = random.choice(zones)
+
+            demand = random.randint(1, 40)   # number of riders requesting trips
+            supply = random.randint(1, 25)   # number of available drivers
+
+            event = {
+                "zone_id": zone_id,
+                "demand": demand,
+                "supply": supply
+            }
+
+            await self.event_bus.publish("zone_supply_demand", event)
+
+            self.logger.info(
+                f"[PRODUCER] Published supply/demand event: {event}"
+            )
+
+            # control frequency of events
+            await asyncio.sleep(1)
+
+    async def start(self, zones=None):
+        """
+        Start the producer loop.
+        """
+        self.logger.info("PricingProducer started...")
+        await self.generate_supply_demand(zones)
