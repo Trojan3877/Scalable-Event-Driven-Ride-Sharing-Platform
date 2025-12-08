@@ -1,55 +1,61 @@
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict
-
-from src.common.models import DriverLocationEvent, MatchResultEvent
+ from fastapi import APIRouter, HTTPException
 from src.common.utils import get_logger
+from src.common.models import DriverLocationEvent
 
+logger = get_logger("DriverLocationAPI")
 router = APIRouter()
-logger = get_logger("DispatchAPI")
 
-
-# These will be injected by main.py
-DRIVER_STORE = None          # Callable → List[DriverLocationEvent]
-MATCH_RESULTS_STORE = None   # List[MatchResultEvent]
+# These will be set by main.py
+DRIVER_STORE = None
 
 
 @router.get("/drivers")
-async def get_available_drivers():
+async def get_all_drivers():
     """
-    Returns the list of currently available drivers.
+    Returns all active drivers and their current coordinates.
     """
     if DRIVER_STORE is None:
-        raise HTTPException(status_code=500, detail="Driver store not initialized.")
+        raise HTTPException(500, "Driver store not initialized.")
 
-    drivers = DRIVER_STORE()
-    return {"count": len(drivers), "drivers": drivers}
+    drivers = DRIVER_STORE.get_all_drivers()
+    return {
+        "count": len(drivers),
+        "drivers": drivers
+    }
 
 
-@router.get("/matches")
-async def get_match_results():
+@router.get("/drivers/{driver_id}")
+async def get_driver(driver_id: str):
     """
-    Returns a list of recent match results.
+    Returns location data for a specific driver.
     """
-    if MATCH_RESULTS_STORE is None:
-        raise HTTPException(status_code=500, detail="Match results store not initialized.")
+    if DRIVER_STORE is None:
+        raise HTTPException(500, "Driver store not initialized.")
 
-    return {"count": len(MATCH_RESULTS_STORE), "matches": MATCH_RESULTS_STORE}
+    driver = DRIVER_STORE.get_driver(driver_id)
+    if not driver:
+        raise HTTPException(404, f"Driver {driver_id} not found.")
+
+    return driver
 
 
-@router.get("/matches/{index}")
-async def get_match_by_index(index: int):
+@router.get("/count")
+async def get_driver_count():
     """
-    Fetch a specific match result by list index.
+    Quick counter to see how many drivers are active.
     """
-    if MATCH_RESULTS_STORE is None or index < 0 or index >= len(MATCH_RESULTS_STORE):
-        raise HTTPException(status_code=404, detail="Match not found.")
+    if DRIVER_STORE is None:
+        raise HTTPException(500, "Driver store not initialized.")
 
-    return MATCH_RESULTS_STORE[index]
+    return {"active_drivers": DRIVER_STORE.count()}
 
 
 @router.get("/health")
 async def health_check():
     """
-    Service status check.
+    Returns service health.
     """
-    return {"status": "OK", "service": "dispatch-service"}
+    return {
+        "status": "OK",
+        "service": "driver-location-service"
+    }
