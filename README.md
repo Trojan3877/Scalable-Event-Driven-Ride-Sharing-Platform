@@ -208,3 +208,17 @@ This platform runs as a distributed event-driven system.
 - `NotificationService` simulates push notifications  
 
 The system responds to real-time events in under **50 milliseconds**, mirroring production ride-sharing systems.
+
+Design Questions & Reflections
+Q: What problem does this project aim to solve?
+A: This project explores how a ride-sharing platform can be designed using an event-driven architecture to handle scale, real-time updates, and asynchronous workflows. The goal was to model how systems coordinate riders, drivers, and events reliably under high load rather than focusing on UI or business logic.
+Q: Why did I choose an event-driven architecture instead of a simpler design?
+A: I chose an event-driven approach to better reflect how real-world distributed systems operate at scale. Decoupling services through events makes the system more resilient and easier to extend, even though it adds complexity compared to a synchronous design.
+Q: What were the main trade-offs I made?
+A: The main trade-off was complexity versus realism. An event-driven system is harder to reason about and debug, but it more accurately represents production-scale systems. I prioritized architectural clarity and scalability over simplicity.
+Q: What didn’t work as expected?
+A: Early on, it was challenging to reason about event ordering and failure scenarios, especially when multiple services depended on the same events. This forced me to slow down and think more carefully about idempotency, retries, and system boundaries.
+Q: What did I learn from building this project?
+A: I learned how important clear contracts and well-defined events are in distributed systems. Small design decisions around event structure and ownership have a big impact on reliability and debuggability as systems grow.
+Q: If I had more time or resources, what would I improve next?
+A: I would add more explicit observability features, such as tracing and metrics, to better understand system behavior under load. I’d also explore how ML-based components, like demand prediction or driver matching, could integrate cleanly into the event-driven pipeline.
