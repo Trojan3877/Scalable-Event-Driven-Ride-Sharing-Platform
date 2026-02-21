@@ -1,90 +1,44 @@
-name: CI Pipeline
+name: RideSharing CI
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "*" ]
+    branches: [ main ]
 
 jobs:
-
-  # =======================================================
-  # 1. Python Lint + Test Job
-  # =======================================================
-  tests:
+  build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: rides
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
 
-    - name: Install dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install black flake8 pytest
+      - name: Run Tests
+        run: pytest --cov=services tests/
 
-    - name: Lint with flake8
-      run: |
-        flake8 src || true
-
-    - name: Format check with black
-      run: |
-        black --check src
-
-    - name: Run unit tests
-      run: |
-        pytest -q
-
-
-  # =======================================================
-  # 2. Docker Build Job
-  # =======================================================
-  docker-build:
-    runs-on: ubuntu-latest
-    needs: tests
-    timeout-minutes: 15
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Cache Docker layers
-      uses: actions/cache@v3
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-
-    - name: Build Driver Location Service image
-      run: |
-        docker build \
-          -f src/driver-location-service/Dockerfile \
-          -t driver-location-service .
-
-    - name: Build Dispatch Service image
-      run: |
-        docker build \
-          -f src/dispatch-service/Dockerfile \
-          -t dispatch-service .
-
-    - name: List built Docker images
-      run: docker images
+      - name: Build Docker Images
+        run: docker-compose build
