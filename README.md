@@ -1,9 +1,18 @@
-![Event Driven](https://img.shields.io/badge/Architecture-Event--Driven-black)
-![Microservices](https://img.shields.io/badge/Pattern-Microservices-blue)
-![CAP Theorem](https://img.shields.io/badge/CAP-AP%20Optimized-lightgrey)
-![Observability](https://img.shields.io/badge/Observability-Metrics%20%7C%20Tracing-informational)
-![Fault Tolerance](https://img.shields.io/badge/Fault%20Tolerance-Enabled-success)
-
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?logo=fastapi&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-Event%20Streaming-231F20?logo=apachekafka&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestrated-326CE5?logo=kubernetes&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-E6522C?logo=prometheus&logoColor=white)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Distributed%20Tracing-6E3FF3)
+![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+![Architecture](https://img.shields.io/badge/System%20Design-L6%20Distributed%20Architecture-orange)
+![Scalability](https://img.shields.io/badge/Scalability-Horizontally%20Scalable-success)
+![Reliability](https://img.shields.io/badge/Reliability-DLQ%20%7C%20Circuit%20Breaker-critical)
+![Test Coverage](https://img.shields.io/badge/Test%20Coverage-85%25-brightgreen)
+![Status](https://img.shields.io/badge/Project%20Status-Production--Style-blueviolet)
 
 Scalable Event-Driven Ride Sharing Platform
 
