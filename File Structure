@@ -1,41 +1,28 @@
-Scalable-Event-Driven-Ride-Sharing-Platform/
+ride-sharing-platform/
 │
-├── src/
-│   ├── gateway/
-│   ├── matching-service/
-│   ├── pricing-service/
+├── services/
+│   ├── api-gateway/
+│   ├── rider-service/
 │   ├── driver-service/
-│   ├── passenger-service/
-│   ├── event-bus/
-│   │   ├── base.py
-│   │   ├── kafka_bus.py
-│   │   ├── redis_bus.py
-│   │   └── rabbitmq_bus.py
-│   └── common/
-│       ├── models.py
-│       └── utils.py
+│   ├── matching-service/
+│   ├── trip-service/
+│   ├── pricing-service/
+│   ├── payment-service/
+│   └── notification-service/
+│
+├── shared/
+│   ├── event_schema/
+│   ├── utils/
+│   └── logging/
 │
 ├── infra/
 │   ├── docker/
 │   ├── kubernetes/
 │   ├── terraform/
-│   └── ansible/
+│   └── helm/
 │
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── load-tests/
-│
-├── docs/
-│   ├── architecture.md
-│   ├── flowchart.png
-│   ├── sequence-diagram.png
-│   └── api-spec.md
-│
+├── load-tests/
 ├── scripts/
-│   └── seed_data.py
-│
-├── docker-compose.yml
-├── requirements.txt
-├── README.md
-└── LICENSE
+├── docs/
+└── README.md
