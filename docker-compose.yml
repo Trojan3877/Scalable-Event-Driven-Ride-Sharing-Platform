@@ -1,51 +1,51 @@
 version: "3.9"
 
 services:
-  # ---------------------------------------------------------
-  # DRIVER LOCATION SERVICE
-  # ---------------------------------------------------------
-  driver-location:
-    build:
-      context: .
-      dockerfile: src/driver-location-service/Dockerfile
-    container_name: driver-location-service
-    ports:
-      - "8003:8003"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/docs"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - ride-net
 
-  # ---------------------------------------------------------
-  # DISPATCH SERVICE
-  # ---------------------------------------------------------
-  dispatch:
-    build:
-      context: .
-      dockerfile: src/dispatch-service/Dockerfile
-    container_name: dispatch-service
-    ports:
-      - "8002:8002"
-    restart: unless-stopped
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
     depends_on:
-      driver-location:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/docs"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - ride-net
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
 
-# -----------------------------------------------------------
-# DOCKER NETWORKS
-# -----------------------------------------------------------
-networks:
-  ride-net:
-    driver: bridge
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: rides
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  api-gateway:
+    build: ./services/api-gateway
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  matching-service:
+    build: ./services/matching-service
+    depends_on:
+      - kafka
+    env_file:
+      - .env
