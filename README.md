@@ -16,9 +16,9 @@
 
 # 🚗 Scalable Event-Driven Ride Sharing Platform
 
-![Architecture](docs/architecture.png)
 
-## 📌 Overview
+
+
 This project simulates a **highly scalable, event-driven ride-sharing platform** inspired by systems like Uber and Lyft.
 
 It demonstrates:
