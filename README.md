@@ -47,7 +47,19 @@ It demonstrates:
 - Services are loosely coupled and independently scalable
 
 ---
+# Testing Strategy
 
+## Types of Tests
+
+- Unit tests per service
+- Integration tests across services
+- Event validation tests
+- Load tests
+
+## Tools
+
+- Pytest / Jest
+- Locust / k6
 ## 🔄 Event Flow
 
 ```text
