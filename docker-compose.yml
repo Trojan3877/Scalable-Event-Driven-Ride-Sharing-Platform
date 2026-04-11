@@ -1,51 +1,28 @@
-version: "3.9"
+version: "3.8"
 
 services:
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: rides
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-
   api-gateway:
     build: ./services/api-gateway
-    depends_on:
-      - kafka
-      - redis
-      - postgres
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    depends_on:
+      - kafka
+
+  rider-service:
+    build: ./services/rider-service
+
+  driver-service:
+    build: ./services/driver-service
 
   matching-service:
     build: ./services/matching-service
-    depends_on:
-      - kafka
-    env_file:
-      - .env
+
+  kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    ports:
+      - "2181:2181"
