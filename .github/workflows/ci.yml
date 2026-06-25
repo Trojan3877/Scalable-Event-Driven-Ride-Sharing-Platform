@@ -14,17 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # FIX 1: Set up Python cleanly without forcing a strict package-lock file match
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # FIX 2: Install tools and frameworks cleanly while safely handling missing requirements files
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      # Installs routing, event-streaming, metrics, caching, and spatial indexing packages upfront
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black mypy bandit pytest fastapi httpx prometheus_client pydantic-settings redis aiokafka
+          pip install flake8 black mypy bandit pytest fastapi httpx prometheus_client pydantic-settings redis aiokafka h3 shapely pika
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Lint (flake8)
