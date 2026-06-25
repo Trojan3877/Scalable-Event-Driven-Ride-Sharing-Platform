@@ -13,7 +13,7 @@
 ![Reliability](https://img.shields.io/badge/Reliability-DLQ%20%7C%20Circuit%20Breaker-critical)
 ![Test Coverage](https://img.shields.io/badge/Test%20Coverage-85%25-brightgreen)
 ![Status](https://img.shields.io/badge/Project%20Status-Production--Style-blueviolet)
-
+![CI Build Status](https://github.com/Trojan3877/Scalable-Event-Driven-Ride-Sharing-Platform/actions/workflows/ci.yml/badge.svg)
 # 🚗 Scalable Event-Driven Ride Sharing Platform
 
 Distributed System Design & High-Throughput Scaling Architecture
